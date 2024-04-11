@@ -14,7 +14,10 @@ const setPlcItemData = async (
     // Post Credentials
     const res: AxiosResponse<ResponseData> = await axiosInit.put(
       '/api/SetData',
-      { ...config, params: { ...data } }
+      {
+        ...data,
+      },
+      { ...config }
     );
 
     return Promise.resolve(res.data);
