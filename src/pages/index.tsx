@@ -124,6 +124,19 @@ export default function Home() {
         });
   };
 
+  const onSendPlcDataSubmit = () => {
+    if (canSendPlcData) {
+      selectedPlc &&
+        plcsData &&
+        setCurrentPlcData(selectedPlc, {
+          CODICE: plcInputData,
+          Uri: plcsData?.[selectedPlc].Uri,
+        });
+    } else {
+      setIsModalOpen(true);
+    }
+  };
+
   const canSendPlcData =
     !!selectedPlc &&
     !!plcsData &&
@@ -188,7 +201,7 @@ export default function Home() {
                 >
                   Ping PLC
                 </button>
-                <button
+                {/* <button
                   disabled={isFetching || isDataLoading}
                   onClick={() => {
                     setAppMode('get');
@@ -197,12 +210,11 @@ export default function Home() {
                   className="btn"
                 >
                   Get PLC Data
-                </button>
+                </button> */}
                 <button
                   disabled={isFetching || isDataLoading}
                   onClick={() => {
                     setAppMode('set');
-                    !canSendPlcData && setIsModalOpen(true);
                   }}
                   className="btn"
                 >
@@ -224,7 +236,7 @@ export default function Home() {
               ) : (
                 <>
                   {appMode === 'set' && (
-                    <div className="border p-1 flex flex-1 flex-col">
+                    <div className="border p-1 flex flex-[0.5] flex-col">
                       <p className="mb-2">Send Data</p>
                       <textarea
                         value={plcInputData}
@@ -233,15 +245,8 @@ export default function Home() {
                         className="border flex-1 text-gray-600 py-1 p-2 text-sm"
                       ></textarea>
                       <button
-                        disabled={!plcInputData || !canSendPlcData}
-                        onClick={() => {
-                          selectedPlc &&
-                            plcsData &&
-                            setCurrentPlcData(selectedPlc, {
-                              CODICE: plcInputData,
-                              Uri: plcsData?.[selectedPlc].Uri,
-                            });
-                        }}
+                        disabled={!plcInputData}
+                        onClick={() => onSendPlcDataSubmit()}
                         className="btn self-end mt-2 mb-1"
                       >
                         Submit
@@ -249,12 +254,14 @@ export default function Home() {
                     </div>
                   )}
 
-                  <div className="border mt-2 flex flex-col gap-2 flex-1 p-2 shrink-0">
-                    <p>Result Info</p>
-                    <div className="flex-1 bg-white border p-2">
-                      <p className="text-gray-600 text-sm">{plcResDataObj}</p>
+                  {appMode === 'ping' && (
+                    <div className="border mt-2 flex flex-col gap-2 flex-[0.5] p-2 shrink-0">
+                      <p>Result Info</p>
+                      <div className="flex-1 bg-white border p-2">
+                        <p className="text-gray-600 text-sm">{plcResDataObj}</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </>
               )}
             </div>
