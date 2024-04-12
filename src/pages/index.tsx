@@ -26,7 +26,11 @@ export default function Home() {
   const [plcResDataObj, setPlcResDataObj] = useState('Sample Result');
   const [isFetching, setIsFetching] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
-  const [plcInputData, setPlcInputData] = useState('');
+  const [plcInputData, setPlcInputData] = useState({
+    codice: '',
+    user: '',
+    odp: '',
+  });
 
   const fetchAllPlcData = (selectedPlcIp?: string, showRes?: boolean) => {
     setIsFetching(true);
@@ -129,18 +133,33 @@ export default function Home() {
       selectedPlc &&
         plcsData &&
         setCurrentPlcData(selectedPlc, {
-          CODICE: plcInputData,
           Uri: plcsData?.[selectedPlc].Uri,
+          ...(!!plcInputData.codice && { CODICE: plcInputData.codice }),
+          ...(!!plcInputData.user && { Valore: plcInputData.user }),
+          ...(!!plcInputData.odp && { Produttore: plcInputData.odp }),
         });
     } else {
       setIsModalOpen(true);
     }
   };
 
+  const inputChangeHandler = (
+    name: keyof typeof plcInputData,
+    value: string
+  ) => {
+    setPlcInputData((s) => ({
+      ...s,
+      [name]: value,
+    }));
+  };
+
   const canSendPlcData =
     !!selectedPlc &&
     !!plcsData &&
     ['True', 'true', true].includes(plcsData?.[selectedPlc].Versione);
+
+  const isFormValid =
+    !!plcInputData.codice || !!plcInputData.user || !!plcInputData.odp;
 
   return (
     <>
@@ -238,14 +257,35 @@ export default function Home() {
                   {appMode === 'set' && (
                     <div className="border p-1 flex flex-[0.5] flex-col">
                       <p className="mb-2">Send Data</p>
-                      <textarea
-                        value={plcInputData}
-                        onChange={(e) => setPlcInputData(e.target.value)}
-                        placeholder="CODICE"
-                        className="border flex-1 text-gray-600 py-1 p-2 text-sm"
-                      ></textarea>
+                      <div className="gap-2 flex flex-col">
+                        <input
+                          value={plcInputData.codice}
+                          onChange={(e) =>
+                            inputChangeHandler('codice', e.target.value)
+                          }
+                          placeholder="CODICE"
+                          className="border flex-1 text-gray-600 py-1 p-2 text-sm"
+                        />
+                        <input
+                          value={plcInputData.user}
+                          onChange={(e) =>
+                            inputChangeHandler('user', e.target.value)
+                          }
+                          placeholder="User (Value)"
+                          className="border flex-1 text-gray-600 py-1 p-2 text-sm"
+                        />
+                        <input
+                          value={plcInputData.odp}
+                          onChange={(e) =>
+                            inputChangeHandler('odp', e.target.value)
+                          }
+                          placeholder="ODP (Produttore)"
+                          className="border flex-1 text-gray-600 py-1 p-2 text-sm"
+                        />
+                      </div>
+
                       <button
-                        disabled={!plcInputData}
+                        disabled={!isFormValid}
                         onClick={() => onSendPlcDataSubmit()}
                         className="btn self-end mt-2 mb-1"
                       >

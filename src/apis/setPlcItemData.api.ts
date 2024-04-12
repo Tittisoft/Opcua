@@ -1,13 +1,11 @@
+import { PLCItem } from '@/configs/interfaces';
 import axiosInit from '@/services/axios';
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
 
 type ResponseData = {};
 
 const setPlcItemData = async (
-  data: {
-    CODICE: string;
-    Uri: string;
-  },
+  data: Partial<PLCItem['mData']>,
   config?: AxiosRequestConfig
 ): Promise<ResponseData> => {
   try {
