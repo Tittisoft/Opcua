@@ -7,6 +7,7 @@ import pingPlc from '@/apis/pingPlc.api';
 import { ScaleLoader } from 'react-spinners';
 import setPlcItemData from '@/apis/setPlcItemData.api';
 import MyModal from '@/components/MyModal';
+import { useRouter } from 'next/router';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -18,13 +19,15 @@ export default function Home() {
     PLCItem['mData']
   > | null>(null);
 
+  const router = useRouter();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [appMode, setAppMode] = useState<AppMode>('set');
   const [selectedPlc, setSelectedPlc] = useState<PLCItem['IPADDRESS'] | null>(
     null
   );
-  const [plcResDataObj, setPlcResDataObj] = useState('Sample Result');
-  const [isFetching, setIsFetching] = useState(false);
+  const [plcResDataObj, setPlcResDataObj] = useState('');
+  const [isFetching, setIsFetching] = useState(true);
   const [isDataLoading, setIsDataLoading] = useState(false);
   const [plcInputData, setPlcInputData] = useState({
     codice: '',
@@ -38,13 +41,15 @@ export default function Home() {
 
     getPlcItems()
       .then((plcsResData) => {
+        const plcsIPArr: Array<PLCItem['IPADDRESS']> = [];
         plcsResData.PlcItems.forEach((plcItem) => {
           plcsObj[`${plcItem.IPADDRESS}`] = plcItem.mData;
+          plcsIPArr.push(plcItem.IPADDRESS);
         });
 
         setPlcsData((s) => ({ ...plcsObj }));
 
-        if (selectedPlcIp) {
+        if (selectedPlcIp && plcsIPArr.includes(selectedPlcIp)) {
           setSelectedPlc(selectedPlcIp);
           showRes &&
             setPlcResDataObj(JSON.stringify(plcsObj?.[selectedPlcIp], null, 2));
@@ -62,27 +67,6 @@ export default function Home() {
         }, 400);
       });
   };
-
-  // const fetchCurrentPlcData = (selectedPlc: string) => {
-  //   setIsFetching(true);
-
-  //   getPlcItemData()
-  //     .then((plcResData) => {
-  //       setPlcsData((s) => ({
-  //         ...s,
-  //         [selectedPlc]: plcResData,
-  //       }));
-
-  //       setPlcResDataObj(JSON.stringify(plcResData));
-
-  //       setIsFetching(false);
-  //       // setSelectedPlc(plcsResData.PlcItems[selectedIdx || 0].IPADDRESS);
-  //     })
-  //     .catch((e) => {
-  //       setIsFetching(false);
-  //       console.log(e);
-  //     });
-  // };
 
   const setCurrentPlcData = (
     selectedPlcIp: string,
@@ -102,15 +86,42 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchAllPlcData(selectedPlc || undefined);
-    var fetchInterval = setInterval(() => {
-      fetchAllPlcData(selectedPlc || undefined);
-    }, 1000 * 60);
+    if (router.isReady) {
+      const plcQuery = router.query?.plc
+        ? String(router.query?.plc)
+        : undefined;
+      fetchAllPlcData(selectedPlc || plcQuery);
+      var fetchInterval = setInterval(() => {
+        fetchAllPlcData(selectedPlc || undefined);
+      }, 1000 * 60);
 
-    return () => {
-      clearInterval(fetchInterval);
-    };
-  }, [selectedPlc]);
+      return () => {
+        clearInterval(fetchInterval);
+      };
+    }
+  }, [selectedPlc, router.isReady, router.query?.plc]);
+
+  useEffect(() => {
+    const { code, value, produttore, plc } = router.query;
+
+    if (!!plcsData && !!selectedPlc && code && plc) {
+      if (selectedPlc === plc) {
+        setPlcInputData((s) => ({
+          ...s,
+          codice: code ? String(code) : '',
+          user: value ? String(value) : '',
+          odp: produttore ? String(produttore) : '',
+        }));
+      } else {
+        setPlcInputData((s) => ({
+          ...s,
+          codice: plcsData?.[selectedPlc].CODICE || '',
+          user: plcsData?.[selectedPlc].Valore || '',
+          odp: plcsData?.[selectedPlc].Produttore || '',
+        }));
+      }
+    }
+  }, [selectedPlc, plcsData, router.query]);
 
   const onPingPlcHandler = () => {
     setAppMode('ping');
@@ -130,14 +141,14 @@ export default function Home() {
 
   const onSendPlcDataSubmit = () => {
     if (canSendPlcData) {
-      selectedPlc &&
-        plcsData &&
+      if (selectedPlc && plcsData) {
         setCurrentPlcData(selectedPlc, {
           Uri: plcsData?.[selectedPlc].Uri,
-          ...(!!plcInputData.codice && { CODICE: plcInputData.codice }),
-          ...(!!plcInputData.user && { Valore: plcInputData.user }),
-          ...(!!plcInputData.odp && { Produttore: plcInputData.odp }),
+          Valore: plcInputData.user,
+          Produttore: plcInputData.odp,
+          CODICE: plcInputData.codice,
         });
+      }
     } else {
       setIsModalOpen(true);
     }
@@ -158,8 +169,7 @@ export default function Home() {
     !!plcsData &&
     ['True', 'true', true].includes(plcsData?.[selectedPlc].Versione);
 
-  const isFormValid =
-    !!plcInputData.codice || !!plcInputData.user || !!plcInputData.odp;
+  const isFormValid = !!plcInputData.codice;
 
   return (
     <>
@@ -206,6 +216,9 @@ export default function Home() {
                     </p>
                     <p>
                       Serial: <span>{plcsData[selectedPlc].Uri}</span>
+                    </p>
+                    <p>
+                      Type: <span>{plcsData[selectedPlc].Produttore}</span>
                     </p>
                   </>
                 )}
@@ -271,7 +284,7 @@ export default function Home() {
                           onChange={(e) =>
                             inputChangeHandler('user', e.target.value)
                           }
-                          placeholder="User (Value)"
+                          placeholder="User"
                           className="border flex-1 text-gray-600 py-1 p-2 text-sm"
                         />
                         <input
@@ -279,7 +292,7 @@ export default function Home() {
                           onChange={(e) =>
                             inputChangeHandler('odp', e.target.value)
                           }
-                          placeholder="ODP (Produttore)"
+                          placeholder="ODP"
                           className="border flex-1 text-gray-600 py-1 p-2 text-sm"
                         />
                       </div>
